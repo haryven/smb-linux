@@ -1,0 +1,27 @@
+From f5fdc7954854d04082ab32395933ab229a027c7e Mon Sep 17 00:00:00 2001
+From: Huiwen He <hehuiwen@kylinos.cn>
+Date: Thu, 22 Jan 2026 14:24:13 +0800
+Subject: [PATCH 1/6] smb/client: move comments for later autolabel
+
+Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
+---
+ fs/smb/client/nterr.h | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/fs/smb/client/nterr.h b/fs/smb/client/nterr.h
+index 9a4a450c6571..3d9dabc67d4f 100644
+--- a/fs/smb/client/nterr.h
++++ b/fs/smb/client/nterr.h
+@@ -562,7 +562,8 @@ extern const struct nt_err_code_struct nt_errs[];
+ #define NT_STATUS_NO_USER_KEYS (0xC0000000 | 0x0290)
+ #define NT_STATUS_VOLUME_NOT_UPGRADED (0xC0000000 | 0x029c)
+ #define NT_STATUS_NETWORK_SESSION_EXPIRED  (0xC0000000 | 0x035c)
+-#define NT_STATUS_NO_SUCH_JOB (0xC0000000 | 0xEDE)	/* scheduler */
++/* scheduler */
++#define NT_STATUS_NO_SUCH_JOB (0xC0000000 | 0xEDE)
+ #define NT_STATUS_NO_PREAUTH_INTEGRITY_HASH_OVERLAP (0xC0000000 | 0x5D0000)
+ #define NT_STATUS_OS2_INVALID_LEVEL 0x007c0001
+ 
+-- 
+2.43.0
+
