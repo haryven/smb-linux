@@ -1,0 +1,295 @@
+From 4f2c0f7c06d1a5278e88a6026e09dcb9bff7b77b Mon Sep 17 00:00:00 2001
+From: Huiwen He <hehuiwen@kylinos.cn>
+Date: Sun, 25 Jan 2026 15:11:37 +0800
+Subject: [PATCH 8/8] smb: client: refactor SMB1 error mapping to use X-macros
+
+Refactor the SMB1 error mapping logic in smb1maperror.c to improve performance
+and maintainability.
+
+Key changes:
+- Move SMB_DOS_ERR_MAP and SMB_SRV_ERR_MAP definitions to fs/smb/client/smberr.h.
+- Replace linear search through mapping_table_ERRDOS and mapping_table_ERRSRV
+  arrays with switch statements generated via X-macros.
+- Encapsulate the mapping logic into new helper functions smb_dos_to_posix and
+  smb_srv_to_posix.
+- Rename the local macro from X to GENERATE_CASE for clarity.
+- Remove unused struct smb_to_posix_error and static arrays.
+
+Performance analysis:
+Disassembly of the generated code confirms that the compiler transforms the
+switch statements into a binary search tree lookup (using 'cmp' and conditional
+jumps 'ja'/'jb'), which is significantly more efficient (O(log N)) than the
+original linear search (O(N)).
+---
+ fs/smb/client/smb1maperror.c | 148 ++++++++---------------------------
+ fs/smb/client/smberr.h       |  78 ++++++++++++++++++
+ 2 files changed, 110 insertions(+), 116 deletions(-)
+
+diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
+index 52922597d352..e04806fac676 100644
+--- a/fs/smb/client/smb1maperror.c
++++ b/fs/smb/client/smb1maperror.c
+@@ -15,94 +15,6 @@
+ #include "nterr.h"
+ #include "cifs_debug.h"
+ 
+-struct smb_to_posix_error {
+-	__u16 smb_err;
+-	int posix_code;
+-};
+-
+-static const struct smb_to_posix_error mapping_table_ERRDOS[] = {
+-	{ERRbadfunc, -EINVAL},
+-	{ERRbadfile, -ENOENT},
+-	{ERRbadpath, -ENOTDIR},
+-	{ERRnofids, -EMFILE},
+-	{ERRnoaccess, -EACCES},
+-	{ERRbadfid, -EBADF},
+-	{ERRbadmcb, -EIO},
+-	{ERRnomem, -EREMOTEIO},
+-	{ERRbadmem, -EFAULT},
+-	{ERRbadenv, -EFAULT},
+-	{ERRbadformat, -EINVAL},
+-	{ERRbadaccess, -EACCES},
+-	{ERRbaddata, -EIO},
+-	{ERRbaddrive, -ENXIO},
+-	{ERRremcd, -EACCES},
+-	{ERRdiffdevice, -EXDEV},
+-	{ERRnofiles, -ENOENT},
+-	{ERRwriteprot, -EROFS},
+-	{ERRbadshare, -EBUSY},
+-	{ERRlock, -EACCES},
+-	{ERRunsup, -EINVAL},
+-	{ERRnosuchshare, -ENXIO},
+-	{ERRfilexists, -EEXIST},
+-	{ERRinvparm, -EINVAL},
+-	{ERRdiskfull, -ENOSPC},
+-	{ERRinvname, -ENOENT},
+-	{ERRunknownlevel, -EOPNOTSUPP},
+-	{ERRdirnotempty, -ENOTEMPTY},
+-	{ERRnotlocked, -ENOLCK},
+-	{ERRcancelviolation, -ENOLCK},
+-	{ERRalreadyexists, -EEXIST},
+-	{ERRmoredata, -EOVERFLOW},
+-	{ERReasnotsupported, -EOPNOTSUPP},
+-	{ErrQuota, -EDQUOT},
+-	{ErrNotALink, -ENOLINK},
+-	{ERRnetlogonNotStarted, -ENOPROTOOPT},
+-	{ERRsymlink, -EOPNOTSUPP},
+-	{ErrTooManyLinks, -EMLINK},
+-	{0, 0}
+-};
+-
+-static const struct smb_to_posix_error mapping_table_ERRSRV[] = {
+-	{ERRerror, -EIO},
+-	{ERRbadpw, -EACCES},  /* was EPERM */
+-	{ERRbadtype, -EREMOTE},
+-	{ERRaccess, -EACCES},
+-	{ERRinvtid, -ENXIO},
+-	{ERRinvnetname, -ENXIO},
+-	{ERRinvdevice, -ENXIO},
+-	{ERRqfull, -ENOSPC},
+-	{ERRqtoobig, -ENOSPC},
+-	{ERRqeof, -EIO},
+-	{ERRinvpfid, -EBADF},
+-	{ERRsmbcmd, -EBADRQC},
+-	{ERRsrverror, -EIO},
+-	{ERRbadBID, -EIO},
+-	{ERRfilespecs, -EINVAL},
+-	{ERRbadLink, -EIO},
+-	{ERRbadpermits, -EINVAL},
+-	{ERRbadPID, -ESRCH},
+-	{ERRsetattrmode, -EINVAL},
+-	{ERRpaused, -EHOSTDOWN},
+-	{ERRmsgoff, -EHOSTDOWN},
+-	{ERRnoroom, -ENOSPC},
+-	{ERRrmuns, -EUSERS},
+-	{ERRtimeout, -ETIME},
+-	{ERRnoresource, -EREMOTEIO},
+-	{ERRtoomanyuids, -EUSERS},
+-	{ERRbaduid, -EACCES},
+-	{ERRusempx, -EIO},
+-	{ERRusestd, -EIO},
+-	{ERR_NOTIFY_ENUM_DIR, -ENOBUFS},
+-	{ERRnoSuchUser, -EACCES},
+-	{ERRaccountexpired, -EKEYEXPIRED},
+-	{ERRbadclient, -EACCES},
+-	{ERRbadLogonTime, -EACCES},
+-	{ERRpasswordExpired, -EKEYEXPIRED},
+-
+-	{ERRnosupport, -EINVAL},
+-	{0, 0}
+-};
+-
+ /*****************************************************************************
+  *convert a NT status code to a dos class/code
+  *****************************************************************************/
+@@ -135,11 +47,40 @@ cifs_print_status(const struct nt_err_code_struct *map)
+ 			  map->ntstatus, map->nt_errstr);
+ }
+ 
++static int smb_dos_to_posix(__u16 err)
++{
++	int rc = -EIO;
++
++	switch (err) {
++#define GENERATE_CASE(smb, posix) case smb: rc = posix; break;
++	SMB_DOS_ERR_MAP(GENERATE_CASE)
++#undef GENERATE_CASE
++	default:
++		break;
++	}
++
++	return rc;
++}
++
++static int smb_srv_to_posix(__u16 err)
++{
++	int rc = -EIO;
++
++	switch (err) {
++#define GENERATE_CASE(smb, posix) case smb: rc = posix; break;
++	SMB_SRV_ERR_MAP(GENERATE_CASE)
++#undef GENERATE_CASE
++	default:
++		break;
++	}
++
++	return rc;
++}
++
+ int
+ map_smb_to_linux_error(char *buf, bool logErr)
+ {
+ 	struct smb_hdr *smb = (struct smb_hdr *)buf;
+-	unsigned int i;
+ 	int rc = -EIO;	/* if transport error smb error may not be set */
+ 	__u8 smberrclass;
+ 	__u16 smberrcode;
+@@ -177,35 +118,10 @@ map_smb_to_linux_error(char *buf, bool logErr)
+ 
+ 	/* DOS class smb error codes - map DOS */
+ 	if (smberrclass == ERRDOS) {
+-		/* 1 byte field no need to byte reverse */
+-		for (i = 0;
+-		     i <
+-		     sizeof(mapping_table_ERRDOS) /
+-		     sizeof(struct smb_to_posix_error); i++) {
+-			if (mapping_table_ERRDOS[i].smb_err == 0)
+-				break;
+-			else if (mapping_table_ERRDOS[i].smb_err ==
+-								smberrcode) {
+-				rc = mapping_table_ERRDOS[i].posix_code;
+-				break;
+-			}
+-			/* else try next error mapping one to see if match */
+-		}
++		rc = smb_dos_to_posix(smberrcode);
+ 	} else if (smberrclass == ERRSRV) {
+ 		/* server class of error codes */
+-		for (i = 0;
+-		     i <
+-		     sizeof(mapping_table_ERRSRV) /
+-		     sizeof(struct smb_to_posix_error); i++) {
+-			if (mapping_table_ERRSRV[i].smb_err == 0)
+-				break;
+-			else if (mapping_table_ERRSRV[i].smb_err ==
+-								smberrcode) {
+-				rc = mapping_table_ERRSRV[i].posix_code;
+-				break;
+-			}
+-			/* else try next error mapping to see if match */
+-		}
++		rc = smb_srv_to_posix(smberrcode);
+ 	}
+ 	/* else ERRHRD class errors or junk  - return EIO */
+ 
+diff --git a/fs/smb/client/smberr.h b/fs/smb/client/smberr.h
+index 6fb63f9e9a95..9cb9b163e272 100644
+--- a/fs/smb/client/smberr.h
++++ b/fs/smb/client/smberr.h
+@@ -169,3 +169,81 @@
+ #define ERRpasswordExpired	2242
+ #define ERRnetlogonNotStarted	2455
+ #define ERRnosupport		0xFFFF
++
++#define SMB_DOS_ERR_MAP(GENERATE_CASE) \
++	GENERATE_CASE(ERRbadfunc, -EINVAL) \
++	GENERATE_CASE(ERRbadfile, -ENOENT) \
++	GENERATE_CASE(ERRbadpath, -ENOTDIR) \
++	GENERATE_CASE(ERRnofids, -EMFILE) \
++	GENERATE_CASE(ERRnoaccess, -EACCES) \
++	GENERATE_CASE(ERRbadfid, -EBADF) \
++	GENERATE_CASE(ERRbadmcb, -EIO) \
++	GENERATE_CASE(ERRnomem, -EREMOTEIO) \
++	GENERATE_CASE(ERRbadmem, -EFAULT) \
++	GENERATE_CASE(ERRbadenv, -EFAULT) \
++	GENERATE_CASE(ERRbadformat, -EINVAL) \
++	GENERATE_CASE(ERRbadaccess, -EACCES) \
++	GENERATE_CASE(ERRbaddata, -EIO) \
++	GENERATE_CASE(ERRbaddrive, -ENXIO) \
++	GENERATE_CASE(ERRremcd, -EACCES) \
++	GENERATE_CASE(ERRdiffdevice, -EXDEV) \
++	GENERATE_CASE(ERRnofiles, -ENOENT) \
++	GENERATE_CASE(ERRwriteprot, -EROFS) \
++	GENERATE_CASE(ERRbadshare, -EBUSY) \
++	GENERATE_CASE(ERRlock, -EACCES) \
++	GENERATE_CASE(ERRunsup, -EINVAL) \
++	GENERATE_CASE(ERRnosuchshare, -ENXIO) \
++	GENERATE_CASE(ERRfilexists, -EEXIST) \
++	GENERATE_CASE(ERRinvparm, -EINVAL) \
++	GENERATE_CASE(ERRdiskfull, -ENOSPC) \
++	GENERATE_CASE(ERRinvname, -ENOENT) \
++	GENERATE_CASE(ERRunknownlevel, -EOPNOTSUPP) \
++	GENERATE_CASE(ERRdirnotempty, -ENOTEMPTY) \
++	GENERATE_CASE(ERRnotlocked, -ENOLCK) \
++	GENERATE_CASE(ERRcancelviolation, -ENOLCK) \
++	GENERATE_CASE(ERRalreadyexists, -EEXIST) \
++	GENERATE_CASE(ERRmoredata, -EOVERFLOW) \
++	GENERATE_CASE(ERReasnotsupported, -EOPNOTSUPP) \
++	GENERATE_CASE(ErrQuota, -EDQUOT) \
++	GENERATE_CASE(ErrNotALink, -ENOLINK) \
++	GENERATE_CASE(ERRnetlogonNotStarted, -ENOPROTOOPT) \
++	GENERATE_CASE(ERRsymlink, -EOPNOTSUPP) \
++	GENERATE_CASE(ErrTooManyLinks, -EMLINK)
++
++#define SMB_SRV_ERR_MAP(GENERATE_CASE) \
++	GENERATE_CASE(ERRerror, -EIO) \
++	GENERATE_CASE(ERRbadpw, -EACCES) \
++	GENERATE_CASE(ERRbadtype, -EREMOTE) \
++	GENERATE_CASE(ERRaccess, -EACCES) \
++	GENERATE_CASE(ERRinvtid, -ENXIO) \
++	GENERATE_CASE(ERRinvnetname, -ENXIO) \
++	GENERATE_CASE(ERRinvdevice, -ENXIO) \
++	GENERATE_CASE(ERRqfull, -ENOSPC) \
++	GENERATE_CASE(ERRqtoobig, -ENOSPC) \
++	GENERATE_CASE(ERRqeof, -EIO) \
++	GENERATE_CASE(ERRinvpfid, -EBADF) \
++	GENERATE_CASE(ERRsmbcmd, -EBADRQC) \
++	GENERATE_CASE(ERRsrverror, -EIO) \
++	GENERATE_CASE(ERRbadBID, -EIO) \
++	GENERATE_CASE(ERRfilespecs, -EINVAL) \
++	GENERATE_CASE(ERRbadLink, -EIO) \
++	GENERATE_CASE(ERRbadpermits, -EINVAL) \
++	GENERATE_CASE(ERRbadPID, -ESRCH) \
++	GENERATE_CASE(ERRsetattrmode, -EINVAL) \
++	GENERATE_CASE(ERRpaused, -EHOSTDOWN) \
++	GENERATE_CASE(ERRmsgoff, -EHOSTDOWN) \
++	GENERATE_CASE(ERRnoroom, -ENOSPC) \
++	GENERATE_CASE(ERRrmuns, -EUSERS) \
++	GENERATE_CASE(ERRtimeout, -ETIME) \
++	GENERATE_CASE(ERRnoresource, -EREMOTEIO) \
++	GENERATE_CASE(ERRtoomanyuids, -EUSERS) \
++	GENERATE_CASE(ERRbaduid, -EACCES) \
++	GENERATE_CASE(ERRusempx, -EIO) \
++	GENERATE_CASE(ERRusestd, -EIO) \
++	GENERATE_CASE(ERR_NOTIFY_ENUM_DIR, -ENOBUFS) \
++	GENERATE_CASE(ERRnoSuchUser, -EACCES) \
++	GENERATE_CASE(ERRaccountexpired, -EKEYEXPIRED) \
++	GENERATE_CASE(ERRbadclient, -EACCES) \
++	GENERATE_CASE(ERRbadLogonTime, -EACCES) \
++	GENERATE_CASE(ERRpasswordExpired, -EKEYEXPIRED) \
++	GENERATE_CASE(ERRnosupport, -EINVAL)
+-- 
+2.43.0
+
