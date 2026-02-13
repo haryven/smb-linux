@@ -1,0 +1,217 @@
+From ce071068fc276e68ade9124680fd0af54364ab55 Mon Sep 17 00:00:00 2001
+From: Huiwen He <hehuiwen@kylinos.cn>
+Date: Fri, 13 Feb 2026 23:57:27 +0800
+Subject: [PATCH 9/9] smb: client: optimize error mapping with unified binary
+ search
+
+Improve performance and maintainability of error mapping lookups across
+both SMB1 and SMB2 by implementing a unified binary search approach:
+
+- Implement manual, highly readable binary search loops for all mapping
+  tables, replacing linear searches and generic __inline_bsearch.
+- Consolidate SMB1 ERRDOS and ERRSRV lookup logic into a single
+  reusable smb1_map_to_posix() interface.
+- Eliminate all sentinel entries ({0,0}, NULL) from mapping tables
+  (mapping_table_ERRDOS, mapping_table_ERRSRV, ntstatus_to_dos_map, and
+  smb2_error_map_table).
+- Use ARRAY_SIZE() and <linux/array_size.h> for safe and precise table
+  boundary handling.
+- Update gen_cifs_maps.pl to stop generating unnecessary sentinels for
+  all mapping modes.
+- Remove redundant comparison functions (cmp_ntstatus, cmp_smb2_status).
+
+This refactoring ensures a consistent, efficient, and idiomatic
+implementation throughout the SMB client.
+
+Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
+---
+ fs/smb/client/gen_cifs_maps.pl |  1 -
+ fs/smb/client/smb1maperror.c   | 68 +++++++++++++++++-----------------
+ fs/smb/client/smb2maperror.c   | 30 +++++++--------
+ 3 files changed, 48 insertions(+), 51 deletions(-)
+
+diff --git a/fs/smb/client/gen_cifs_maps.pl b/fs/smb/client/gen_cifs_maps.pl
+index a65c954ab3f1..afdbb474c89e 100644
+--- a/fs/smb/client/gen_cifs_maps.pl
++++ b/fs/smb/client/gen_cifs_maps.pl
+@@ -63,7 +63,6 @@ if ($mode eq "smb1-nt") {
+     foreach my $e (@list) {
+         printf $out "\t{ %s, %s, %s, \"%s\" },\n", $e->{class}, $e->{code}, $e->{name}, $e->{name};
+     }
+-    print $out "\t{ 0, 0, 0, NULL }\n";
+ } elsif ($mode eq "smb2-status") {
+     my $full_status = "";
+     for (my $i = 0; $i < scalar @list; $i++) {
+diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
+index 72d6f4528727..d2a687493f21 100644
+--- a/fs/smb/client/smb1maperror.c
++++ b/fs/smb/client/smb1maperror.c
+@@ -9,6 +9,7 @@
+  * 2 of the Licence, or (at your option) any later version.
+  */
+ 
++#include <linux/array_size.h>
+ #include "cifsproto.h"
+ #include "smb1proto.h"
+ #include "smberr.h"
+@@ -22,12 +23,10 @@ struct smb_to_posix_error {
+ 
+ static const struct smb_to_posix_error mapping_table_ERRDOS[] = {
+ #include "smberr_dos_map.h"
+-	{0, 0}
+ };
+ 
+ static const struct smb_to_posix_error mapping_table_ERRSRV[] = {
+ #include "smberr_srv_map.h"
+-	{0, 0}
+ };
+ 
+ /*****************************************************************************
+@@ -41,15 +40,41 @@ static const struct nt_err_code_struct ntstatus_to_dos_map[] = {
+ static const struct nt_err_code_struct *
+ ntstatus_to_dos(__u32 ntstatus)
+ {
+-	int i;
++	int low = 0, high = ARRAY_SIZE(ntstatus_to_dos_map) - 1;
+ 
+-	for (i = 0; ntstatus_to_dos_map[i].nt_errstr != NULL; i++) {
+-		if (ntstatus == ntstatus_to_dos_map[i].ntstatus)
+-			return &ntstatus_to_dos_map[i];
++	while (low <= high) {
++		int mid = low + (high - low) / 2;
++
++		if (ntstatus_to_dos_map[mid].ntstatus == ntstatus)
++			return &ntstatus_to_dos_map[mid];
++
++		if (ntstatus_to_dos_map[mid].ntstatus < ntstatus)
++			low = mid + 1;
++		else
++			high = mid - 1;
+ 	}
+ 	return NULL;
+ }
+ 
++static int
++smb1_map_to_posix(__u16 smberrcode, const struct smb_to_posix_error *table,
++		  unsigned int table_size)
++{
++	int low = 0, high = table_size - 1;
++
++	while (low <= high) {
++		int mid = low + (high - low) / 2;
++
++		if (table[mid].smb_err == smberrcode)
++			return table[mid].posix_code;
++
++		if (table[mid].smb_err < smberrcode)
++			low = mid + 1;
++		else
++			high = mid - 1;
++	}
++	return -EIO;
++}
+ 
+ /*****************************************************************************
+  Print an error message from the status code
+@@ -66,7 +91,6 @@ int
+ map_smb_to_linux_error(char *buf, bool logErr)
+ {
+ 	struct smb_hdr *smb = (struct smb_hdr *)buf;
+-	unsigned int i;
+ 	int rc = -EIO;	/* if transport error smb error may not be set */
+ 	__u8 smberrclass;
+ 	__u16 smberrcode;
+@@ -105,34 +129,12 @@ map_smb_to_linux_error(char *buf, bool logErr)
+ 	/* DOS class smb error codes - map DOS */
+ 	if (smberrclass == ERRDOS) {
+ 		/* 1 byte field no need to byte reverse */
+-		for (i = 0;
+-		     i <
+-		     sizeof(mapping_table_ERRDOS) /
+-		     sizeof(struct smb_to_posix_error); i++) {
+-			if (mapping_table_ERRDOS[i].smb_err == 0)
+-				break;
+-			else if (mapping_table_ERRDOS[i].smb_err ==
+-								smberrcode) {
+-				rc = mapping_table_ERRDOS[i].posix_code;
+-				break;
+-			}
+-			/* else try next error mapping one to see if match */
+-		}
++		rc = smb1_map_to_posix(smberrcode, mapping_table_ERRDOS,
++				       ARRAY_SIZE(mapping_table_ERRDOS));
+ 	} else if (smberrclass == ERRSRV) {
+ 		/* server class of error codes */
+-		for (i = 0;
+-		     i <
+-		     sizeof(mapping_table_ERRSRV) /
+-		     sizeof(struct smb_to_posix_error); i++) {
+-			if (mapping_table_ERRSRV[i].smb_err == 0)
+-				break;
+-			else if (mapping_table_ERRSRV[i].smb_err ==
+-								smberrcode) {
+-				rc = mapping_table_ERRSRV[i].posix_code;
+-				break;
+-			}
+-			/* else try next error mapping to see if match */
+-		}
++		rc = smb1_map_to_posix(smberrcode, mapping_table_ERRSRV,
++				       ARRAY_SIZE(mapping_table_ERRSRV));
+ 	}
+ 	/* else ERRHRD class errors or junk  - return EIO */
+ 
+diff --git a/fs/smb/client/smb2maperror.c b/fs/smb/client/smb2maperror.c
+index cd036365201f..2a69d1036caf 100644
+--- a/fs/smb/client/smb2maperror.c
++++ b/fs/smb/client/smb2maperror.c
+@@ -8,6 +8,7 @@
+  *
+  */
+ #include <linux/errno.h>
++#include <linux/array_size.h>
+ #include "cifsglob.h"
+ #include "cifsproto.h"
+ #include "cifs_debug.h"
+@@ -30,27 +31,22 @@ static const struct status_to_posix_error smb2_error_map_table[] = {
+ #include "smb2_mapping_table.c"
+ };
+ 
+-static __always_inline int cmp_smb2_status(const void *_key, const void *_pivot)
++static const struct status_to_posix_error *smb2_get_err_map(__u32 smb2_status)
+ {
+-	__u32 key = *(__u32 *)_key;
+-	const struct status_to_posix_error *pivot = _pivot;
++	int low = 0, high = ARRAY_SIZE(smb2_error_map_table) - 1;
+ 
+-	if (key < pivot->smb2_status)
+-		return -1;
+-	if (key > pivot->smb2_status)
+-		return 1;
+-	return 0;
+-}
++	while (low <= high) {
++		int mid = low + (high - low) / 2;
+ 
+-static const struct status_to_posix_error *smb2_get_err_map(__u32 smb2_status)
+-{
+-	const struct status_to_posix_error *err_map;
++		if (smb2_error_map_table[mid].smb2_status == smb2_status)
++			return &smb2_error_map_table[mid];
+ 
+-	err_map = __inline_bsearch(&smb2_status, smb2_error_map_table,
+-				   ARRAY_SIZE(smb2_error_map_table),
+-				   sizeof(struct status_to_posix_error),
+-				   cmp_smb2_status);
+-	return err_map;
++		if (smb2_error_map_table[mid].smb2_status < smb2_status)
++			low = mid + 1;
++		else
++			high = mid - 1;
++	}
++	return NULL;
+ }
+ 
+ int
+-- 
+2.43.0
+
