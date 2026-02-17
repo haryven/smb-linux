@@ -1,7 +1,7 @@
-From 19195b44af8dd76c4d55b47678f8a145642219a1 Mon Sep 17 00:00:00 2001
+From d18bd757111775fe616e448313de1029f7e9ccae Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
-Date: Mon, 16 Feb 2026 14:50:18 +0800
-Subject: [PATCH 5/7] smb: client: refactor ntstatus_to_dos() and
+Date: Wed, 18 Feb 2026 00:30:55 +0800
+Subject: [PATCH 5/7] smb/client: refactor ntstatus_to_dos() and
  cifs_print_status()
 
 Modify ntstatus_to_dos() to return a 'const struct nt_err_code_struct *'

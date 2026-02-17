@@ -1,7 +1,7 @@
-From 3947a884e44f8f46244cbc1f3edc500b3671fd4d Mon Sep 17 00:00:00 2001
+From bb639354ebd70c9d1eaab2971f8b5b3a9cc8d914 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
-Date: Fri, 13 Feb 2026 23:36:22 +0800
-Subject: [PATCH 6/7] smb: client: optimize SMB1 error mapping with binary
+Date: Wed, 18 Feb 2026 00:31:38 +0800
+Subject: [PATCH 6/7] smb/client: optimize SMB1 error mapping with binary
  search
 
 Currently, map_smb_to_linux_error() uses linear searches for both
@@ -20,7 +20,7 @@ Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
  1 file changed, 24 insertions(+), 29 deletions(-)
 
 diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
-index a7ae59cd23ba..e7c8720fdef4 100644
+index a7ae59cd23ba..a79c6a188a3d 100644
 --- a/fs/smb/client/smb1maperror.c
 +++ b/fs/smb/client/smb1maperror.c
 @@ -22,12 +22,10 @@ struct smb_to_posix_error {
@@ -42,7 +42,7 @@ index a7ae59cd23ba..e7c8720fdef4 100644
  
 +static int
 +smb1_map_to_posix(const struct smb_to_posix_error *table,
-+			  int num_entries, __u16 smb_err)
++		  int num_entries, __u16 smb_err)
 +{
 +	int low = 0, high = num_entries - 1;
 +
@@ -89,7 +89,7 @@ index a7ae59cd23ba..e7c8720fdef4 100644
 -			/* else try next error mapping one to see if match */
 -		}
 +		rc = smb1_map_to_posix(mapping_table_ERRDOS,
-+			ARRAY_SIZE(mapping_table_ERRDOS), smberrcode);
++				       ARRAY_SIZE(mapping_table_ERRDOS), smberrcode);
  	} else if (smberrclass == ERRSRV) {
  		/* server class of error codes */
 -		for (i = 0;
@@ -106,7 +106,7 @@ index a7ae59cd23ba..e7c8720fdef4 100644
 -			/* else try next error mapping to see if match */
 -		}
 +		rc = smb1_map_to_posix(mapping_table_ERRSRV,
-+			ARRAY_SIZE(mapping_table_ERRSRV), smberrcode);
++				       ARRAY_SIZE(mapping_table_ERRSRV), smberrcode);
  	}
  	/* else ERRHRD class errors or junk  - return EIO */
  

@@ -1,7 +1,7 @@
-From 54fd1b6ccda3f23166ffe76470de82190f8b7b84 Mon Sep 17 00:00:00 2001
+From 5c017d335119b6d717e86277882d18716f409642 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
-Date: Mon, 16 Feb 2026 17:12:51 +0800
-Subject: [PATCH 7/7] smb: client: optimize NT status lookup with binary search
+Date: Wed, 18 Feb 2026 00:34:30 +0800
+Subject: [PATCH 7/7] smb/client: optimize NT status lookup with binary search
 
 The ntstatus_to_dos_map[] table is sorted. Replace the linear search with
 binary search to improve lookup performance.
@@ -14,7 +14,7 @@ Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
  1 file changed, 11 insertions(+), 5 deletions(-)
 
 diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
-index e7c8720fdef4..f1ddc68da955 100644
+index a79c6a188a3d..1467de4d4e8a 100644
 --- a/fs/smb/client/smb1maperror.c
 +++ b/fs/smb/client/smb1maperror.c
 @@ -34,17 +34,23 @@ static const struct smb_to_posix_error mapping_table_ERRSRV[] = {

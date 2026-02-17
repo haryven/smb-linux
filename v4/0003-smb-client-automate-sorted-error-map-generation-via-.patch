@@ -1,6 +1,6 @@
-From 2e878526d7c77a733a71c72f2dc6ff75bb543216 Mon Sep 17 00:00:00 2001
+From 6d395e2937ba143d485d21b23bee1a664e5945a3 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
-Date: Mon, 16 Feb 2026 14:50:18 +0800
+Date: Tue, 17 Feb 2026 23:47:21 +0800
 Subject: [PATCH 3/7] smb/client: automate sorted error map generation via
  unified script
 
