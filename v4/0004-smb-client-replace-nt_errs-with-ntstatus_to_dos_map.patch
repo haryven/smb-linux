@@ -1,4 +1,4 @@
-From ea2cc58e462401270bf56090ff412bfe691c1b29 Mon Sep 17 00:00:00 2001
+From 07aadc6db6de19ebd609d8ecb4f2ec215d4e812a Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:30:14 +0800
 Subject: [PATCH 4/7] smb/client: replace nt_errs with ntstatus_to_dos_map
@@ -744,10 +744,10 @@ index 2045a66e55fd..fd5c91e822cb 100644
  #define NT_ERROR_INVALID_PARAMETER     0x0057
  #define NT_ERROR_INSUFFICIENT_BUFFER   0x007a
 diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
-index e902fc9ca07d..12b10cb11760 100644
+index 0f2dc5244cb9..645c7aca2b55 100644
 --- a/fs/smb/client/smb1maperror.c
 +++ b/fs/smb/client/smb1maperror.c
-@@ -34,12 +34,7 @@ static const struct smb_to_posix_error mapping_table_ERRSRV[] = {
+@@ -33,12 +33,7 @@ static const struct smb_to_posix_error mapping_table_ERRSRV[] = {
   *convert a NT status code to a dos class/code
   *****************************************************************************/
  /* NT status -> dos error map */
@@ -761,7 +761,7 @@ index e902fc9ca07d..12b10cb11760 100644
  #include "smb1_mapping_table.c"
  	{0, 0, 0, NULL}
  };
-@@ -50,17 +45,15 @@ static const struct {
+@@ -49,17 +44,15 @@ static const struct {
  static void
  cifs_print_status(__u32 status_code)
  {

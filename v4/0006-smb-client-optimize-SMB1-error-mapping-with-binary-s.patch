@@ -1,4 +1,4 @@
-From bb639354ebd70c9d1eaab2971f8b5b3a9cc8d914 Mon Sep 17 00:00:00 2001
+From 64f3aae31c791f71f26ccd04a53d0b27c205cd95 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:31:38 +0800
 Subject: [PATCH 6/7] smb/client: optimize SMB1 error mapping with binary
@@ -20,10 +20,10 @@ Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
  1 file changed, 24 insertions(+), 29 deletions(-)
 
 diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
-index a7ae59cd23ba..a79c6a188a3d 100644
+index bf1d2fc6e511..3e6a2afe7ab3 100644
 --- a/fs/smb/client/smb1maperror.c
 +++ b/fs/smb/client/smb1maperror.c
-@@ -22,12 +22,10 @@ struct smb_to_posix_error {
+@@ -21,12 +21,10 @@ struct smb_to_posix_error {
  
  static const struct smb_to_posix_error mapping_table_ERRDOS[] = {
  #include "smberr_dos_map.h"
@@ -36,7 +36,7 @@ index a7ae59cd23ba..a79c6a188a3d 100644
  };
  
  /*****************************************************************************
-@@ -51,6 +49,26 @@ ntstatus_to_dos(__u32 ntstatus)
+@@ -50,6 +48,26 @@ ntstatus_to_dos(__u32 ntstatus)
  	return NULL;
  }
  
@@ -63,7 +63,7 @@ index a7ae59cd23ba..a79c6a188a3d 100644
  /*****************************************************************************
   *Print an error message from the status code
   *****************************************************************************/
-@@ -66,7 +84,6 @@ int
+@@ -65,7 +83,6 @@ int
  map_smb_to_linux_error(char *buf, bool logErr)
  {
  	struct smb_hdr *smb = (struct smb_hdr *)buf;
@@ -71,7 +71,7 @@ index a7ae59cd23ba..a79c6a188a3d 100644
  	int rc = -EIO;	/* if transport error smb error may not be set */
  	__u8 smberrclass;
  	__u16 smberrcode;
-@@ -105,34 +122,12 @@ map_smb_to_linux_error(char *buf, bool logErr)
+@@ -104,34 +121,12 @@ map_smb_to_linux_error(char *buf, bool logErr)
  	/* DOS class smb error codes - map DOS */
  	if (smberrclass == ERRDOS) {
  		/* 1 byte field no need to byte reverse */
