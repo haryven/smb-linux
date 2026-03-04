@@ -1,4 +1,4 @@
-From f939ec6ba9f1b2f78ec7963ae50791725b820456 Mon Sep 17 00:00:00 2001
+From f316c22395c55586fc84e71ff825ede4623263f8 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:34:30 +0800
 Subject: [PATCH 7/7] smb/client: optimize NT status lookup with binary search

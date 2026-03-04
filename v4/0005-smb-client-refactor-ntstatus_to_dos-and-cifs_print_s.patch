@@ -1,4 +1,4 @@
-From 93c2992e92ab2ac01497480453bd4ee18cbec5db Mon Sep 17 00:00:00 2001
+From 974c88957e550a9753956dbb69b1fdf69b18e4bd Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:30:55 +0800
 Subject: [PATCH 5/7] smb/client: refactor ntstatus_to_dos() and

@@ -1,4 +1,4 @@
-From 8cfe865fede878d0faa968c173df7f55381a2065 Mon Sep 17 00:00:00 2001
+From 2c3ca1d5efee0bdfd785bc36984fe82f27464328 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Tue, 17 Feb 2026 23:47:21 +0800
 Subject: [PATCH 3/7] smb/client: automate sorted error map generation via
@@ -28,10 +28,10 @@ Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
  delete mode 100644 fs/smb/client/gen_smb2_mapping
 
 diff --git a/fs/smb/client/Makefile b/fs/smb/client/Makefile
-index 3abd357d6df6..24d3109d9cb6 100644
+index 26b6105f04d1..a7c55385a5d0 100644
 --- a/fs/smb/client/Makefile
 +++ b/fs/smb/client/Makefile
-@@ -45,15 +45,29 @@ cifs-$(CONFIG_CIFS_ALLOW_INSECURE_LEGACY) += \
+@@ -45,17 +45,31 @@ cifs-$(CONFIG_CIFS_ALLOW_INSECURE_LEGACY) += \
  cifs-$(CONFIG_CIFS_COMPRESSION) += compress.o compress/lz77.o
  
  #
@@ -65,6 +65,8 @@ index 3abd357d6df6..24d3109d9cb6 100644
 +
 +$(obj)/smb1maperror.o: $(obj)/smb1_mapping_table.c $(obj)/smberr_dos_map.h $(obj)/smberr_srv_map.h
 +$(obj)/smb2maperror.o: $(obj)/smb2_mapping_table.c
+ 
+ obj-$(CONFIG_SMB_KUNIT_TESTS) += smb2maperror_test.o
  
 -clean-files	+= smb2_mapping_table.c
 +targets += smb1_mapping_table.c smberr_dos_map.h smberr_srv_map.h smb2_mapping_table.c

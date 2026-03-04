@@ -1,4 +1,4 @@
-From b9e1b9c47c65f346544b53b0f1ff0dee705d1283 Mon Sep 17 00:00:00 2001
+From a5601c8ead5fe16112c87042eff284d35c6adb0d Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Tue, 17 Feb 2026 22:38:00 +0800
 Subject: [PATCH 1/7] smb/client: annotate nterr.h with DOS error codes
