@@ -1,4 +1,4 @@
-From f320c74b98ab647a3ceda47801809cb71384f921 Mon Sep 17 00:00:00 2001
+From 838312477de226010e1b7211b28c9a32ab11b5d2 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:30:55 +0800
 Subject: [PATCH 6/8] smb/client: avoid redundant lookups in

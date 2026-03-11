@@ -1,4 +1,4 @@
-From 263a558dbdd3af5a4feba2a96ab585093b2c088c Mon Sep 17 00:00:00 2001
+From 4fe8bd7af9eb8efc27838d381ae8d6ed9d470cfe Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Mon, 9 Mar 2026 15:41:16 +0800
 Subject: [PATCH 4/8] smb/client: automate SMB1 POSIX error mapping
@@ -26,12 +26,12 @@ Reviewed-by: ChenXiaoSong <chenxiaosong@kylinos.cn>
  3 files changed, 34 insertions(+), 78 deletions(-)
 
 diff --git a/fs/smb/client/Makefile b/fs/smb/client/Makefile
-index 5eea1d8aa287..62d098d68566 100644
+index 6a5c2f273d6f..a240fdb5cdb9 100644
 --- a/fs/smb/client/Makefile
 +++ b/fs/smb/client/Makefile
 @@ -47,11 +47,19 @@ cifs-$(CONFIG_CIFS_COMPRESSION) += compress.o compress/lz77.o
  #
- # Build the SMB1 error mapping tables from nterr.h and smberr.h
+ # Build the SMB1 error mapping tables from nterr.h
  #
 -smb1-generated-y := smb1_mapping_table.c
 +smb1-generated-y := smb1_mapping_table.c \
