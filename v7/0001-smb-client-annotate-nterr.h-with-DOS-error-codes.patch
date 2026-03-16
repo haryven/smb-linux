@@ -1,4 +1,4 @@
-From 84fab8a75a001ac1cb37f2bdef76c6f23b366908 Mon Sep 17 00:00:00 2001
+From 03b3e7d5e5e3be80a53f543644a6e70dd818c216 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Tue, 17 Feb 2026 22:38:00 +0800
 Subject: [PATCH 1/8] smb/client: annotate nterr.h with DOS error codes
@@ -15,95 +15,98 @@ allowing the implementation of binary search for faster error mapping
 lookups in later commits.
 
 The mapping data is extracted from the existing manual
-'ntstatus_to_dos_map' array in smb1maperror.c using the following script:
+'ntstatus_to_dos_map' array in smb1maperror.c using the following
+python script:
 
-import re
-import os
+	#!/usr/bin/env python3
+	import re
+	import os
 
-MAP_FILE = "fs/smb/client/smb1maperror.c"
-NTERR_FILE = "fs/smb/client/nterr.h"
+	MAP_FILE = "fs/smb/client/smb1maperror.c"
+	NTERR_FILE = "fs/smb/client/nterr.h"
 
-def move_comments(file_path):
-    """
-    Moves existing inline comments (/* ... */ or // ...) to
-    the preceding line to ensure formatting consistency.
-    """
-    if not os.path.exists(file_path):
-        return
-    with open(file_path, "r") as f:
-        lines = f.readlines()
-    new_lines = []
-    # Match #define statements with inline comments
-    re_str = r'^(\s*#define\s+[A-Za-z0-9_]+\s+.*?)\s*(/\*.*?\*/|//.*)$'
-    pattern = re.compile(re_str)
-    for line in lines:
-        match = pattern.match(line.rstrip())
-        if match:
-            define_part, comment_part = match.groups()
-            indent = " " * (len(line) - len(line.lstrip()))
-            # Move old comment to previous line
-            new_lines.append(indent + comment_part + "\n")
-            # Keep the define part
-            new_lines.append(define_part.rstrip() + "\n")
-        else:
-            new_lines.append(line)
-    with open(file_path, "w") as f:
-        f.writelines(new_lines)
+	def move_comments(file_path):
+	    """
+	    Moves existing inline comments (/* ... */ or // ...) to
+	    the preceding line to ensure formatting consistency.
+	    """
+	    if not os.path.exists(file_path):
+		return
+	    with open(file_path, "r") as f:
+		lines = f.readlines()
+	    new_lines = []
+	    # Match #define statements with inline comments
+	    re_str = r'^(\s*#define\s+[A-Za-z0-9_]+\s+.*?)\s*(/\*.*?\*/|//.*)$'
+	    pattern = re.compile(re_str)
+	    for line in lines:
+		match = pattern.match(line.rstrip())
+		if match:
+		    define_part, comment_part = match.groups()
+		    indent = " " * (len(line) - len(line.lstrip()))
+		    # Move old comment to previous line
+		    new_lines.append(indent + comment_part + "\n")
+		    # Keep the define part
+		    new_lines.append(define_part.rstrip() + "\n")
+		else:
+		    new_lines.append(line)
+	    with open(file_path, "w") as f:
+		f.writelines(new_lines)
 
-def annotate_nterr():
-    """
-    Extracts DOS error mappings from smb1maperror.c and appends them
-    as comments to NT_STATUS defines in nterr.h, ensuring proper alignment.
-    """
-    mapping = {}
-    if not os.path.exists(MAP_FILE) or not os.path.exists(NTERR_FILE):
-        return
+	def annotate_nterr():
+	    """
+	    Extracts DOS error mappings from smb1maperror.c and appends them
+	    as comments to NT_STATUS defines in nterr.h, ensuring proper alignment.
+	    """
+	    mapping = {}
+	    if not os.path.exists(MAP_FILE) or not os.path.exists(NTERR_FILE):
+		return
 
-    # Extract mappings from the source mapping table
-    with open(MAP_FILE, "r") as f:
-        content = f.read()
-        # Find entries like { 0x01, ERRgeneral, NT_STATUS_UNSUCCESSFUL }
-        map_re = (
-            r'\{\s*([A-Z0-9_]+)\s*,\s*([A-Z-a-z0-9_]+)\s*,\s*'
-            r'(NT_STATUS_[A-Za-z0-9_]+)'
-        )
-        matches = re.findall(map_re, content)
-        for m in matches:
-            mapping[m[2]] = (m[0], m[1])
+	    # Extract mappings from the source mapping table
+	    with open(MAP_FILE, "r") as f:
+		content = f.read()
+		# Find entries like { 0x01, ERRgeneral, NT_STATUS_UNSUCCESSFUL }
+		map_re = (
+		    r'\{\s*([A-Z0-9_]+)\s*,\s*([A-Z-a-z0-9_]+)\s*,\s*'
+		    r'(NT_STATUS_[A-Za-z0-9_]+)'
+		)
+		matches = re.findall(map_re, content)
+		for m in matches:
+		    mapping[m[2]] = (m[0], m[1])
 
-    with open(NTERR_FILE, "r") as f:
-        lines = f.readlines()
+	    with open(NTERR_FILE, "r") as f:
+		lines = f.readlines()
 
-    new_lines = []
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("#define NT_STATUS_"):
-            # Remove any existing // comments before re-annotating
-            base_line = re.sub(r'\s*//.*$', '', line.rstrip())
-            parts = base_line.split()
-            if len(parts) >= 2:
-                name = parts[1]
-                # Append comment, ensuring proper alignment
-                if name == "NT_STATUS_OK":
-                    line = f"{base_line}\t// SUCCESS, 0\n"
-                elif name in mapping:
-                    d_class, d_code = mapping[name]
-                    line = f"{base_line}\t// {d_class}, {d_code}\n"
-                else:
-                    line = f"{base_line}\t// ERRHRD, ERRgeneral\n"
-        new_lines.append(line)
+	    new_lines = []
+	    for line in lines:
+		stripped = line.strip()
+		if stripped.startswith("#define NT_STATUS_"):
+		    # Remove any existing // comments before re-annotating
+		    base_line = re.sub(r'\s*//.*$', '', line.rstrip())
+		    parts = base_line.split()
+		    if len(parts) >= 2:
+			name = parts[1]
+			# Append comment, ensuring proper alignment
+			if name == "NT_STATUS_OK":
+			    line = f"{base_line}\t// SUCCESS, 0\n"
+			elif name in mapping:
+			    d_class, d_code = mapping[name]
+			    line = f"{base_line}\t// {d_class}, {d_code}\n"
+			else:
+			    line = f"{base_line}\t// ERRHRD, ERRgeneral\n"
+		new_lines.append(line)
 
-    with open(NTERR_FILE, "w") as f:
-        f.writelines(new_lines)
+	    with open(NTERR_FILE, "w") as f:
+		f.writelines(new_lines)
 
-if __name__ == "__main__":
-    # Step 1: Clean existing inline comments and move them to separate lines
-    move_comments(NTERR_FILE)
-    # Step 2: Annotate with DOS codes, ensuring proper comment alignment
-    annotate_nterr()
-    print("Successfully processed nterr.h with comments aligned.")
+	if __name__ == "__main__":
+	    # Step 1: Clean existing inline comments and move them to separate lines
+	    move_comments(NTERR_FILE)
+	    # Step 2: Annotate with DOS codes, ensuring proper comment alignment
+	    annotate_nterr()
+	    print("Successfully processed nterr.h with comments aligned.")
 
 Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
+Reviewed-by: ChenXiaoSong <chenxiaosong@kylinos.cn>
 ---
  fs/smb/client/nterr.h | 1067 +++++++++++++++++++++--------------------
  1 file changed, 534 insertions(+), 533 deletions(-)

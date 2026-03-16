@@ -1,4 +1,4 @@
-From 917753fba10c1e53bbad98b3aa246878e3739705 Mon Sep 17 00:00:00 2001
+From ed506b9de95dcb8cac062ec762513fe61bcb08a7 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Mon, 9 Mar 2026 15:41:16 +0800
 Subject: [PATCH 4/8] smb/client: automate SMB1 POSIX error mapping
@@ -20,18 +20,21 @@ arrays.
 Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
 Reviewed-by: ChenXiaoSong <chenxiaosong@kylinos.cn>
 ---
- fs/smb/client/Makefile         | 10 ++++-
+ fs/smb/client/Makefile         | 12 +++++-
  fs/smb/client/gen_smb1_mapping | 25 ++++++++++-
  fs/smb/client/smb1maperror.c   | 77 +---------------------------------
- 3 files changed, 34 insertions(+), 78 deletions(-)
+ 3 files changed, 35 insertions(+), 79 deletions(-)
 
 diff --git a/fs/smb/client/Makefile b/fs/smb/client/Makefile
-index 959cb92e3eb0..8b5a6a884226 100644
+index 959cb92e3eb0..c92897a6b7c3 100644
 --- a/fs/smb/client/Makefile
 +++ b/fs/smb/client/Makefile
-@@ -47,11 +47,19 @@ cifs-$(CONFIG_CIFS_COMPRESSION) += compress.o compress/lz77.o
+@@ -45,13 +45,21 @@ cifs-$(CONFIG_CIFS_ALLOW_INSECURE_LEGACY) += \
+ cifs-$(CONFIG_CIFS_COMPRESSION) += compress.o compress/lz77.o
+ 
  #
- # Build the SMB1 error mapping tables from nterr.h
+-# Build the SMB1 error mapping tables from nterr.h
++# Build the SMB1 error mapping tables from nterr.h and smberr.h
  #
 -smb1-generated-y := smb1_mapping_table.c
 +smb1-generated-y := smb1_mapping_table.c \

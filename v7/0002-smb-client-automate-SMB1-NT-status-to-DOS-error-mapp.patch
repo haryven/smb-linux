@@ -1,4 +1,4 @@
-From dba5670676d000bc3254b3ed1368daf76f6a99a9 Mon Sep 17 00:00:00 2001
+From 18c53fc1fe1b93e663a7ca9505885df43ffb739d Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Mon, 9 Mar 2026 15:30:36 +0800
 Subject: [PATCH 2/8] smb/client: automate SMB1 NT status to DOS error mapping
