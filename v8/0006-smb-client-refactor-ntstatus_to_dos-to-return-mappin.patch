@@ -1,4 +1,4 @@
-From 8b8a4b375d8a6f0362d49f850cd0176ff815a48e Mon Sep 17 00:00:00 2001
+From dc22d9e494a477fd6ad10b9654f71f4647efefb6 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:30:55 +0800
 Subject: [PATCH 6/8] smb/client: refactor ntstatus_to_dos() to return mapping

@@ -1,21 +1,19 @@
-From 379c3691771344b75a43303b4cdb52a89b6ad952 Mon Sep 17 00:00:00 2001
+From 387b0412ea27940284243af26e8cea0049bc41e1 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Mon, 9 Mar 2026 15:41:16 +0800
-Subject: [PATCH 4/8] smb/client: automate SMB1 POSIX error mapping
+Subject: [PATCH 4/8] smb/client: autogenerate SMB1 DOS/SRV to POSIX error
+ mapping
 
-Extend the 'gen_smb1_mapping' script to support generating POSIX error
-mapping tables for both ERRDOS and ERRSRV classes. The script parses
-annotations from 'smberr.h' and generates sorted mapping arrays at
-compile time.
+Extend the 'gen_smb1_mapping' script to support generating sorted POSIX
+error mapping tables for both ERRDOS and ERRSRV classes at compile time.
 
-This ensures that the mapping logic remains synchronized with the
-source headers and facilitates faster error mapping lookups via future
-binary search implementation.
+The script parses annotations from 'smberr.h' to generate 'smberr_dos_map.c'
+and 'smberr_srv_map.c', which are included as the contents of the arrays
+'mapping_table_ERRDOS' and 'mapping_table_ERRSRV', respectively.
 
-Update the Makefile to generate 'smberr_dos_map.c' and 'smberr_srv_map.c'.
-Modify 'smb1maperror.c' to use these generated tables, allowing for the
-removal of the manual 'mapping_table_ERRDOS' and 'mapping_table_ERRSRV'
-arrays.
+This ensures that the mapping logic remains synchronized with the source
+headers and prepares for faster error lookups using binary search in the
+future.
 
 Signed-off-by: Huiwen He <hehuiwen@kylinos.cn>
 Reviewed-by: ChenXiaoSong <chenxiaosong@kylinos.cn>
@@ -238,7 +236,7 @@ index 64d37b89c286..40fae1d31d88 100644
  };
  
 diff --git a/fs/smb/client/smberr.h b/fs/smb/client/smberr.h
-index a848b6ad987a..791c893cabd6 100644
+index a848b6ad987a..98074c64587d 100644
 --- a/fs/smb/client/smberr.h
 +++ b/fs/smb/client/smberr.h
 @@ -24,7 +24,11 @@
@@ -260,7 +258,7 @@ index a848b6ad987a..791c893cabd6 100644
  
 -/* Following error codes may be generated with the ERRSRV error class.*/
 +/*
-+ * Following error codes may be generated with the ERRSRV error class.
++ * The following error codes may be generated with the ERRSRV error class.
 + * The comment at the end of each definition indicates the POSIX error
 + * code; it is used to generate the `mapping_table_ERRSRV` array.
 + */

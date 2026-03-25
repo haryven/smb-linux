@@ -1,4 +1,4 @@
-From 7cc26df34cdda904778c49a4d0d6d47fda0320e1 Mon Sep 17 00:00:00 2001
+From 863cceb84604312f437c0b7f0cf2b775e235a70b Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:34:30 +0800
 Subject: [PATCH 7/8] smb/client: use binary search for NT status to DOS
