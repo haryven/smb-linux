@@ -1,4 +1,4 @@
-From b014ee608c0ded529fd608f3a132fd4009487d13 Mon Sep 17 00:00:00 2001
+From 9e921dacd818cea5f8042b2eb4eb0b5f66d03d55 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:30:14 +0800
 Subject: [PATCH 5/8] smb/client: replace nt_errs with ntstatus_to_dos_map
