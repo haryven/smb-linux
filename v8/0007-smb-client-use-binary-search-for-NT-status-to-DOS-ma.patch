@@ -1,11 +1,11 @@
-From 7171318c7089135cbb5bd7ef2b987fb16ba87efe Mon Sep 17 00:00:00 2001
+From 93c0e5c407eb342a38d3a2c9f88e211468255cdd Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:34:30 +0800
 Subject: [PATCH 7/8] smb/client: use binary search for NT status to DOS
  mapping
 
-The ntstatus_to_dos_map[] table is sorted. Replace the linear search with
-binary search to improve lookup performance.
+The ntstatus_to_dos_map[] table is sorted now. Replace the linear search
+with binary search to improve lookup performance.
 
 Also remove the sentinel entry as it is no longer needed with ARRAY_SIZE().
 
@@ -16,10 +16,10 @@ Reviewed-by: ChenXiaoSong <chenxiaosong@kylinos.cn>
  1 file changed, 16 insertions(+), 10 deletions(-)
 
 diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
-index 066e4b866687..981d54cf0d7a 100644
+index 8d93a7e53ec2..04ef7769435b 100644
 --- a/fs/smb/client/smb1maperror.c
 +++ b/fs/smb/client/smb1maperror.c
-@@ -40,6 +40,18 @@ static const struct smb_to_posix_error mapping_table_ERRSRV[] = {
+@@ -42,6 +42,18 @@ static const struct smb_to_posix_error mapping_table_ERRSRV[] = {
  /*****************************************************************************
   *convert a NT status code to a dos class/code
   *****************************************************************************/
@@ -38,9 +38,9 @@ index 066e4b866687..981d54cf0d7a 100644
  /* NT status -> dos error map */
  static const struct nt_err_code_struct ntstatus_to_dos_map[] = {
  /*
-@@ -47,22 +59,16 @@ static const struct nt_err_code_struct ntstatus_to_dos_map[] = {
- * sorted by NT status code (ascending).
- */
+@@ -49,22 +61,16 @@ static const struct nt_err_code_struct ntstatus_to_dos_map[] = {
+  * sorted by NT status code (ascending).
+  */
  #include "smb1_mapping_table.c"
 -	{0, 0, 0, NULL}
  };

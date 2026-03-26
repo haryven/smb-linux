@@ -1,15 +1,15 @@
-From 8586c320b3a136f23d2f8268b48effd6e872b28e Mon Sep 17 00:00:00 2001
+From 9477879a0ad26a4108fa1d635b0c7b4768919c97 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Mon, 9 Mar 2026 15:41:16 +0800
 Subject: [PATCH 4/8] smb/client: autogenerate SMB1 DOS/SRV to POSIX error
  mapping
 
-Extend the 'gen_smb1_mapping' script to support generating sorted POSIX
+Extend the `gen_smb1_mapping` script to support generating sorted POSIX
 error mapping tables for both ERRDOS and ERRSRV classes at compile time.
 
-The script parses annotations from 'smberr.h' to generate 'smberr_dos_map.c'
-and 'smberr_srv_map.c', which are included as the contents of the arrays
-'mapping_table_ERRDOS' and 'mapping_table_ERRSRV', respectively.
+The script parses annotations from smberr.h to generate smberr_dos_map.c
+and smberr_srv_map.c, which are included as the contents of the arrays
+mapping_table_ERRDOS[] and mapping_table_ERRSRV[], respectively.
 
 This ensures that the mapping logic remains synchronized with the source
 headers and prepares for faster error lookups using binary search in the
@@ -103,7 +103,7 @@ index bfd3d4b8f509..c72e52d4c8de 100644
  }
  close($out);
 diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
-index 64d37b89c286..40fae1d31d88 100644
+index 7228ca5a2ac8..a8faba7eab52 100644
 --- a/fs/smb/client/smb1maperror.c
 +++ b/fs/smb/client/smb1maperror.c
 @@ -20,85 +20,20 @@ struct smb_to_posix_error {

@@ -1,4 +1,4 @@
-From 8353c3d71f4068bbf857f82377e1400b89a2523a Mon Sep 17 00:00:00 2001
+From 8df24d2304d5efaf917e2c949334d1018fa98b38 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Tue, 17 Feb 2026 22:38:00 +0800
 Subject: [PATCH 1/8] smb/client: annotate nterr.h with DOS error codes
@@ -15,7 +15,7 @@ allowing the implementation of binary search for faster error mapping
 lookups in later commits.
 
 The mapping data is extracted from the existing manual
-'ntstatus_to_dos_map' array in smb1maperror.c using the following
+ntstatus_to_dos_map[] array in smb1maperror.c using the following
 python script:
 
 	#!/usr/bin/env python3

@@ -1,4 +1,4 @@
-From e8239bcfe90f51d070523e68b7c941f988263660 Mon Sep 17 00:00:00 2001
+From b787c6e2a3ab3801ba0938a17c7ba8ae84782276 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Wed, 18 Feb 2026 00:30:55 +0800
 Subject: [PATCH 6/8] smb/client: refactor ntstatus_to_dos() to return mapping
@@ -19,10 +19,10 @@ Reviewed-by: ChenXiaoSong <chenxiaosong@kylinos.cn>
  1 file changed, 19 insertions(+), 32 deletions(-)
 
 diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
-index e8cf0dffbe82..066e4b866687 100644
+index 3d6257a90317..8d93a7e53ec2 100644
 --- a/fs/smb/client/smb1maperror.c
 +++ b/fs/smb/client/smb1maperror.c
-@@ -50,41 +50,19 @@ static const struct nt_err_code_struct ntstatus_to_dos_map[] = {
+@@ -52,41 +52,19 @@ static const struct nt_err_code_struct ntstatus_to_dos_map[] = {
  	{0, 0, 0, NULL}
  };
  
@@ -35,7 +35,7 @@ index e8cf0dffbe82..066e4b866687 100644
 -	int idx = 0;
 -
 -	while (ntstatus_to_dos_map[idx].nt_errstr) {
--		if (ntstatus_to_dos_map[idx].nt_errcode == status_code) {
+-		if (ntstatus_to_dos_map[idx].ntstatus == status_code) {
 -			pr_notice("Status code returned 0x%08x %s\n",
 -				  status_code, ntstatus_to_dos_map[idx].nt_errstr);
 -			return;
@@ -69,7 +69,7 @@ index e8cf0dffbe82..066e4b866687 100644
  }
  
  int
-@@ -106,11 +84,20 @@ map_smb_to_linux_error(char *buf, bool logErr)
+@@ -108,11 +86,20 @@ map_smb_to_linux_error(char *buf, bool logErr)
  		/* translate the newer STATUS codes to old style SMB errors
  		 * and then to POSIX errors */
  		__u32 err = le32_to_cpu(smb->Status.CifsError);

@@ -1,4 +1,4 @@
-From 150e3aafe9e8e7d52983b6005e2fe82afc0bf3b8 Mon Sep 17 00:00:00 2001
+From f7ebbd8f5b696e52d2cb6d3edbfbb9f2adcd70c2 Mon Sep 17 00:00:00 2001
 From: Huiwen He <hehuiwen@kylinos.cn>
 Date: Tue, 17 Feb 2026 23:40:33 +0800
 Subject: [PATCH 3/8] smb/client: annotate smberr.h with POSIX error codes
@@ -15,7 +15,7 @@ allowing the implementation of binary search for faster error mapping
 lookups in later commits.
 
 The annotations were performed based on the manual
-'mapping_table_ERRDOS' and 'mapping_table_ERRSRV' arrays in
+mapping_table_ERRDOS[] and mapping_table_ERRSRV[] arrays in
 smb1maperror.c using the following python script:
 
 	#!/usr/bin/env python3
