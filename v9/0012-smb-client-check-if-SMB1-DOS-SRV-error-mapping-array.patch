@@ -1,0 +1,50 @@
+From da882a876159bad290776a11ef0821a7385a724d Mon Sep 17 00:00:00 2001
+From: Youling Tang <tangyouling@kylinos.cn>
+Date: Wed, 1 Apr 2026 07:29:11 +0000
+Subject: [PATCH 12/14] smb/client: check if SMB1 DOS/SRV error mapping arrays
+ are sorted
+
+Although the arrays are sorted at build time, verify the ordering again
+when cifs.ko is loaded to avoid potential regressions introduced by
+future script changes.
+
+Signed-off-by: Youling Tang <tangyouling@kylinos.cn>
+Reviewed-by: ChenXiaoSong <chenxiaosong@kylinos.cn>
+Signed-off-by: Steve French <stfrench@microsoft.com>
+---
+ fs/smb/client/smb1maperror.c | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/fs/smb/client/smb1maperror.c b/fs/smb/client/smb1maperror.c
+index 3074c60301ad..e8f559754178 100644
+--- a/fs/smb/client/smb1maperror.c
++++ b/fs/smb/client/smb1maperror.c
+@@ -219,6 +219,10 @@ static int __array ## _is_sorted(void)					\
+ 
+ /* ntstatus_to_dos_map_is_sorted */
+ DEFINE_CHECK_SORT_FUNC(ntstatus_to_dos_map, ntstatus);
++/* mapping_table_ERRDOS_is_sorted */
++DEFINE_CHECK_SORT_FUNC(mapping_table_ERRDOS, smb_err);
++/* mapping_table_ERRSRV_is_sorted */
++DEFINE_CHECK_SORT_FUNC(mapping_table_ERRSRV, smb_err);
+ 
+ int __init smb1_init_maperror(void)
+ {
+@@ -228,6 +232,14 @@ int __init smb1_init_maperror(void)
+ 	if (rc)
+ 		return rc;
+ 
++	rc = mapping_table_ERRDOS_is_sorted();
++	if (rc)
++		return rc;
++
++	rc = mapping_table_ERRSRV_is_sorted();
++	if (rc)
++		return rc;
++
+ 	return rc;
+ }
+ 
+-- 
+2.43.0
+
